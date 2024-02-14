@@ -204,13 +204,13 @@ app.use('/api/userImage', express.static(path.join(__dirname, 'uploads')));
 
 app.post('/api/insertUser', (req, res) => {
   // const { username, password } = req.body;
-  const { firstname, lastname, middlename, email, role, password } = req.body;
+  const { firstname, lastname, middlename, address, sex, email, role, password } = req.body;
   bcrypt.hash(password, saltRounds, (err, hash) => {
     if (err) {
       console.log(err);
     }
-    const query = 'INSERT INTO users (firstname, lastname, middlename, email, role, password) VALUES (?, ?, ?, ?, ?, ?)';
-    db.query(query, [firstname, lastname, middlename, email, role, hash], (err, result) => {
+    const query = 'INSERT INTO users (firstname, lastname, middlename, address, sex, email, role, password) VALUES (?, ?, ?, ?, ?, ?, ?, ?)';
+    db.query(query, [firstname, lastname, middlename, address, sex, email, role, hash], (err, result) => {
       if (err) {
         // console.error(err);
         return res.status(500).json({ error: 'Internal server error' });
