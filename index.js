@@ -220,6 +220,29 @@ app.post('/api/insertUser', (req, res) => {
   })
 });
 
+app.put('/api/resetPassword', (req, res) => {
+  const { email, newPassword } = req.body;
+
+  // Execute an SQL query to update the user's password in the database
+  const query = 'UPDATE users SET password = ? WHERE email = ?';
+
+  bcrypt.hash(newPassword, saltRounds, (err, hash) => {
+    if (err) {
+      console.error('Error hashing password:', err);
+      return res.status(500).json({ error: 'Failed to reset password.' });
+    }
+
+    db.query(query, [hash, email], (error, result) => {
+      if (error) {
+        console.error('Error updating password:', error);
+        return res.status(500).json({ error: 'Failed to reset password.' });
+      }
+      
+      res.status(200).json({ message: 'Password reset successful.' });
+    });
+  });
+});
+
 app.post('/api/createProject', (req, res) => {
   const { projectID, projectName, startDate } = req.body;
   const query = 'INSERT INTO projects (projectID, projectName, startDate) VALUES (?, ?, ?)';
