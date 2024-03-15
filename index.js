@@ -1161,6 +1161,42 @@ app.put('/api/updateOutcome/:id', (req, res) => {
   });
 });
 
+// Get all members
+app.get('/api/members', (req, res) => {
+  const query = 'SELECT * FROM users WHERE isDeleted = 0';
+
+  db.query(query, (err, results) => {
+    if (err) {
+      console.error('Error fetching members:', err);
+      res.status(500).json({ message: 'Internal server error' });
+      return;
+    }
+
+    res.json(results);
+  });
+});
+
+// Update or delete a member
+app.put('/api/updateDeleteMember/:id', (req, res) => {
+  const id = req.params.id;
+
+  const query = 'UPDATE users SET isDeleted = 1 WHERE id = ?';
+
+  db.query(query, [id], (err, result) => {
+    if (err) {
+      console.error('Error updating/deleting member:', err);
+      res.status(500).json({ message: 'Internal server error' });
+      return;
+    }
+
+    if (result.affectedRows === 0) {
+      res.status(404).json({ message: 'Member not found' });
+      return;
+    }
+
+    res.json({ message: 'Member deleted successfully' });
+  });
+});
 
 app.put('/api/updateDeleteActivity/:id', (req, res) => {
   const id = req.params.id;
