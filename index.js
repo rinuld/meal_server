@@ -331,14 +331,44 @@ app.post('/api/createOutcome', (req, res) => {
   });
 });
 
+app.post('/api/createOutput', (req, res) => {
+  const { output, outcomeID } = req.body;
+  const query = 'INSERT INTO output (outputID, title, objOutID) VALUES (?, ?, ?)';
+  db.query("SELECT id FROM output ORDER BY id DESC LIMIT 1", (err, result) => {
+    if (err) {
+      console.log('Error retrieving last voucher number:', err);
+      res.status(500).send('Error retrieving last voucher number');
+    } else {
+      let outputID = 1;
+      if (result.length > 0) {
+        outputID = parseInt(result[0].id) + 1;
+      }
+      const formattedOutputID = "OUTP" + outputID.toString().padStart(4, "0");
+      db.query(query, [formattedOutputID, output, outcomeID], (err, result) => {
+        if (err) {
+          console.log("Error Here");
+          return res.status(500).json({ error: err.message });
+        } else {
+          const insertedData = {
+            outcomeID: outcomeID,
+            outputID: formattedOutputID,
+            title: output
+          };
+          res.status(200).json(insertedData);
+        }
+      });
+    }
+  });
+});
+
 app.post('/api/createIndicators', (req, res) => {
-  const { indicator, iskpi, targetReach, actualReach, unit, format, freqreport, outcomeID } = req.body;
+  const { indicator, iskpi, targetReach, actualReach, unit, format, freqreport, outputID } = req.body;
   const query = 'INSERT INTO indicator (indicatorID, indicator, iskpi, targetreach, unit, actualreach, format, freqreport, objOutID) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)';
   db.query("show table status like 'indicator'", (err, result) => {
     if (result && result[0] && result[0].Rows !== undefined) {
       let indicatorID = result[0].Rows + 1; // Access the result[0].Rows value
       const formattedIndicatorID = "INDI" + indicatorID.toString().padStart(4, "0");
-      db.query(query, [formattedIndicatorID, indicator, iskpi, targetReach, unit, actualReach, format, freqreport, outcomeID], (err, result) => {
+      db.query(query, [formattedIndicatorID, indicator, iskpi, targetReach, unit, actualReach, format, freqreport, outputID], (err, result) => {
         if (err) {
           console.log("Error Here");
           return res.status(500).json({ error: err.message });
@@ -352,7 +382,7 @@ app.post('/api/createIndicators', (req, res) => {
             actualreach: actualReach,
             format: format,
             freqreport: freqreport,
-            objOutID: outcomeID,
+            objOutID: outputID,
           };
           res.status(200).json(insertedData);
         }
@@ -744,9 +774,22 @@ app.get('/api/outcomes/:id', (req, res) => {
   });
 });
 
+app.get('/api/outputs/:id', (req, res) => {
+  const id = req.params.id;
+  const sqlSelect = "SELECT * FROM output WHERE objOutID = ? AND isDeleted = 0 ORDER BY id ASC";
+  db.query(sqlSelect, [id], (err, result) => {
+    if (err) {
+      console.error('Error fetching output data:', err);
+      res.status(500).send('Error fetching output data');
+    } else {
+      res.json(result);
+    }
+  });
+});
+
 app.get('/api/indicators/:id', (req, res) => {
   const id = req.params.id;
-  const sqlSelect = "SELECT * FROM indicator where objOutID like ?";
+  const sqlSelect = "SELECT * FROM indicator where objOutID like ? and isDeleted = 0 order by id asc";
   db.query(sqlSelect, [id], (err, result) => {
     if (err) {
       // console.log('Error fetching data:', err);
@@ -1073,6 +1116,44 @@ app.put('/api/updateDeleteOutcomes/:id', (req, res) => {
   });
 });
 
+app.put('/api/updateDeleteOutputs/:id', (req, res) => {
+  const id = req.params.id;
+
+  const query = 'UPDATE output SET isDeleted = ? WHERE id = ?';
+
+  // Execute the update query
+  db.query(query, [true, id], (err, result) => {
+    if (err) {
+      console.error('Error updating outcome:', err);
+      res.status(500).json({ message: 'Internal server error' });
+      return;
+    }
+
+    if (result.affectedRows === 0) {
+      res.status(404).json({ message: 'Output not found' });
+      return;
+    }
+
+    // Get the title from the updated objective
+    const getTitleQuery = 'SELECT title FROM output WHERE id = ?';
+    db.query(getTitleQuery, [id], (err, result) => {
+      if (err) {
+        console.error('Error fetching title:', err);
+        res.status(500).json({ message: 'Internal server error' });
+        return;
+      }
+
+      if (result.length === 0) {
+        res.status(404).json({ message: 'Output not found' });
+        return;
+      }
+
+      const title = result[0].title;
+      res.json({ message: 'Output deleted successfully', title });
+    });
+  });
+});
+
 app.put('/api/updateDeleteIndicator/:id', (req, res) => {
   const id = req.params.id;
 
@@ -1139,7 +1220,7 @@ app.put('/api/updateObjective/:id', (req, res) => {
 
 app.put('/api/updateOutcome/:id', (req, res) => {
   const id = req.params.id;
-  const { editOutcome} = req.body;
+  const { editOutcome } = req.body;
 
   const query = 'UPDATE outcome SET title = ? WHERE outcomeID = ?';
   const values = [editOutcome, id];
@@ -1158,6 +1239,30 @@ app.put('/api/updateOutcome/:id', (req, res) => {
     }
 
     res.json({ message: 'outcome updated successfully', editOutcome });
+  });
+});
+
+app.put('/api/updateOutput/:id', (req, res) => {
+  const id = req.params.id;
+  const { editOutput } = req.body;
+
+  const query = 'UPDATE output SET title = ? WHERE outputID = ?';
+  const values = [editOutput, id];
+
+  // Execute the update query
+  db.query(query, values, (err, result) => {
+    if (err) {
+      console.error('Error updating output:', err);
+      res.status(500).json({ message: 'Internal server error' });
+      return;
+    }
+
+    if (result.affectedRows === 0) {
+      res.status(404).json({ message: 'output not found' });
+      return;
+    }
+
+    res.json({ message: 'output updated successfully', editOutput });
   });
 });
 
