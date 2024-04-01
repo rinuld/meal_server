@@ -624,16 +624,15 @@ app.get('/api/team', (req, res) => {
   });
 });
 
-app.get('/api/partners', (req, res) => {
-  const sqlSelect = "SELECT * FROM partners";
-  db.query(sqlSelect, (err, result) => {
+app.get('/api/partners/:id', (req, res) => {
+  const projectId = req.params.id;
+  const sqlSelect = "SELECT amount, source, date FROM budgetlog WHERE projectId = ?";
+  db.query(sqlSelect, projectId, (err, result) => {
     if (err) {
-      // console.log('Error fetching members:', err);
-      res.status(500).send('Error fetching partners order by id asc');
-      console.log(result);
+      console.log('Error fetching partners:', err);
+      res.status(500).send('Error fetching partners');
     } else {
       res.json(result);
-      // console.log(result.data);
     }
   });
 });
