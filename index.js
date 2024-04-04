@@ -1016,10 +1016,10 @@ app.put('/api/updateactivity/:id', (req, res) => {
 
 app.put('/api/updateIndicator/:id', (req, res) => {
   const id = req.params.id;
-  const { indicatorName, targetReach, unit, format, freqReport } = req.body;
+  const { indicatorName, targetReach, actualReach, unit, format, freqReport } = req.body;
 
-  const query = 'UPDATE indicator SET indicator = ?, targetreach = ?, unit = ?, format = ?, freqreport = ? WHERE indicatorID = ?';
-  const values = [indicatorName, targetReach, unit, format, freqReport, id];
+  const query = 'UPDATE indicator SET indicator = ?, targetreach = ?, actualreach = ?, unit = ?, format = ?, freqreport = ? WHERE indicatorID = ?';
+  const values = [indicatorName, targetReach, actualReach, unit, format, freqReport, id];
 
   // Execute the update query
   db.query(query, values, (err, result) => {
