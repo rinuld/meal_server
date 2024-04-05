@@ -802,7 +802,7 @@ app.get('/api/indicators/:id', (req, res) => {
 
 app.get('/api/indicatorData/:id', (req, res) => {
   const id = req.params.id;
-  const sqlSelect = "SELECT year, targetReach, actualReach FROM indicatordata where indicatorID like ?";
+  const sqlSelect = "SELECT targetreach, actualreach FROM indicator WHERE indicatorID like ?";
   db.query(sqlSelect, [id], (err, result) => {
     if (err) {
       res.status(500).send('Error fetching data');
