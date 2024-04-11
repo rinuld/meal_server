@@ -262,8 +262,9 @@ app.post('/api/createProject', (req, res) => {
 
 app.post('/api/createActivity', (req, res) => {
   const { actDate, activityID, activityName, budget } = req.body;
-  const query = 'INSERT INTO activity (activityID, activityName, actDate, budget) VALUES (?, ?, ?, ?)';
-  db.query(query, [activityID, activityName, actDate, budget], (err, result) => {
+  const status = 'Ongoing';
+  const query = 'INSERT INTO activity (activityID, activityName, actDate, budget, status) VALUES (?, ?, ?, ?, ?)';
+  db.query(query, [activityID, activityName, actDate, budget, status], (err, result) => {
     if (err) {
       return res.status(500).json({ error: err.message });
     }
@@ -991,10 +992,10 @@ app.put('/api/updateproject/:id', (req, res) => {
 
 app.put('/api/updateactivity/:id', (req, res) => {
   const id = req.params.id;
-  const { activityName, selectedDate, status, budget } = req.body;
+  const { activityName, selectedDate, status, budget, actual } = req.body;
 
-  const query = 'UPDATE activity SET activityName = ?, actDate = ?, status = ?, budget = ? WHERE activityID = ?';
-  const values = [activityName, selectedDate, status, budget, id];
+  const query = 'UPDATE activity SET activityName = ?, actDate = ?, status = ?, budget = ?, actual = ? WHERE activityID = ?';
+  const values = [activityName, selectedDate, status, budget, actual, id];
 
   // Execute the update query
   db.query(query, values, (err, result) => {
