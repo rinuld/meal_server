@@ -244,9 +244,9 @@ app.put('/api/resetPassword', (req, res) => {
 });
 
 app.post('/api/createProject', (req, res) => {
-  const { projectID, projectName, startDate } = req.body;
-  const query = 'INSERT INTO projects (projectID, projectName, startDate) VALUES (?, ?, ?)';
-  db.query(query, [projectID, projectName, startDate], (err, result) => {
+  const { projectID, projectName, startDate, teamMembers } = req.body;
+  const query = 'INSERT INTO projects (projectID, projectName, startDate, teamMembers) VALUES (?, ?, ?, ?)';
+  db.query(query, [projectID, projectName, startDate, teamMembers], (err, result) => {
     if (err) {
       return res.status(500).json({ error: err.message });
     }
@@ -254,6 +254,7 @@ app.post('/api/createProject', (req, res) => {
       projectID,
       projectName,
       startDate,
+      teamMembers,
       budget: 0
     };
     res.status(200).json(insertedData);
@@ -1278,6 +1279,49 @@ app.get('/api/members', (req, res) => {
     }
 
     res.json(results);
+  });
+});
+
+// Get all users
+app.get('/api/users', (req, res) => {
+  const { firstname, lastname } = req.query;
+  const sqlSelect = "SELECT firstname, middlename, lastname, role, email FROM users WHERE firstname = ? AND lastname = ?";
+  
+  db.query(sqlSelect, [firstname, lastname], (err, result) => {
+    if (err) {
+      console.log('Error fetching users:', err);
+      res.status(500).send('Error fetching users');
+    } else {
+      res.status(200).json(result);
+    }
+  });
+});
+
+// Get all users when adding a project 
+app.get('/api/addProjMember', (req, res) => {
+  const sqlSelect = "SELECT id, firstname, lastname FROM users WHERE isDeleted = 0";
+  db.query(sqlSelect, (err, result) => {
+    if (err) {
+      console.log(err);
+      res.status(500).send('Error fetching users');
+    } else {
+      res.json(result);
+    }
+  });
+});
+
+// Get all project members
+app.get('/api/projectMembers/:id', (req, res) => {
+  const projectId = req.params.id;
+  const sqlSelect = "SELECT teamMembers FROM projects WHERE projectID = ?";
+  
+  db.query(sqlSelect, [projectId], (err, result) => {
+    if (err) {
+      console.log('Error fetching project members:', err);
+      res.status(500).send('Error fetching project members');
+    } else {
+      res.status(200).json(result[0]); // Return the teamMembers of the project
+    }
   });
 });
 
