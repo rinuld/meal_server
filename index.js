@@ -1386,28 +1386,92 @@ app.put('/api/updateDeleteActivity/:id', (req, res) => {
 });
 
 
+function formatDate(date) {
+  // Create a new Date object
+  const options = { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: 'numeric', second: 'numeric', hour12: true };
+  return date.toLocaleString('en-US', options);
+}
 
-// Delete
 
-// app.delete('/api/deleteObjectives/:id', (req, res) => {
-//   const id = req.params.id;
-//   const deleteQuery = "Delete"
+const currentDate = new Date();
+const formattedDate = formatDate(currentDate);
 
-//   // Perform the database deletion operation using an SQL DELETE statement
-//   const sqlDelete = 'DELETE FROM your_table_name WHERE id = ?';
-//   pool.query(sqlDelete, [id], (error, result) => {
-//     if (error) {
-//       console.error('Error deleting row:', error);
-//       res.status(500).json({ success: false, error: 'Internal server error' });
-//     } else {
-//       if (result.affectedRows === 0) {
-//         res.status(404).json({ success: false, error: 'Row not found' });
-//       } else {
-//         res.json({ success: true });
-//       }
-//     }
-//   });
-// });
+const insertActivityReportQuery = `
+    INSERT INTO activityreport
+    (activityReportID, selectedProject, selectedActivity, selectedObjective, selectedOutcome, 
+     selectedOutput, selectedIndicator, selectedInstitutions, detailedDescription, keyOutputs, 
+     challenges, successStories, conclusions, date)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+`;
+
+const insertGADDataQuery = `
+    INSERT INTO argaddata
+    (activityReportID, category, male, female, lgbtqia, date)
+    VALUES (?, ?, ?, ?, ?, ?)
+`;
+
+
+// Add an activity report
+app.post('/api/addActivityReport', (req, res) => {
+  db.query("SELECT id FROM activityreport ORDER BY id DESC LIMIT 1", (err, result) => {
+    if (err) {
+      console.log('Error retrieving last activity report:', err);
+      res.status(500).send('Error retrieving last activity report');
+    } else {
+      let activityReportID = 1;
+      if (result.length > 0) {
+        activityReportID = parseInt(result[0].id) + 1;
+      }
+
+      const { 
+        selectedProject, selectedActivity, selectedObjective, selectedOutcome, 
+        selectedOutput, selectedIndicator, selectedInstitutions, detailedDescription, keyOutputs, 
+        challenges, successStories, conclusions, genderAgeDisabilityData 
+      } = req.body;
+
+      const formattedActivityReportID = "AR" + activityReportID.toString().padStart(4, "0");
+
+      // Insert the activity report data
+      db.query(insertActivityReportQuery, [formattedActivityReportID, selectedProject, selectedActivity, selectedObjective, 
+        selectedOutcome, selectedOutput, selectedIndicator, selectedInstitutions.join(', '), detailedDescription, keyOutputs, 
+        challenges, successStories, conclusions, formattedDate], (error, results) => {
+        
+        if (error) {
+          console.error('Error inserting activity report:', error);
+          return res.status(500).json({ message: 'Error inserting activity report' });
+        }
+
+        // Insert each category of gender age disability data
+        const insertPromises = genderAgeDisabilityData.map(data => {
+          return new Promise((resolve, reject) => {
+            db.query(insertGADDataQuery, [
+              formattedActivityReportID,
+              data.category,
+              data.male,
+              data.female,
+              data.lgbtqia,
+              formattedDate,
+            ], (error) => {
+              if (error) {
+                reject(error);
+              } else {
+                resolve();
+              }
+            });
+          });
+        });
+
+        Promise.all(insertPromises)
+          .then(() => {
+            res.status(201).json({ message: 'Activity report and gender age disability data submitted successfully!', activityReportID: formattedActivityReportID });
+          })
+          .catch(err => {
+            res.status(500).json({ message: 'Error inserting gender age disability data' });
+          });
+      });
+    }
+  });
+});
 
 
 app.listen(3001, () => {
