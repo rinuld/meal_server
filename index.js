@@ -194,9 +194,9 @@ app.put('/api/resetPassword', (req, res) => {
 });
 
 app.post('/api/createProject', (req, res) => {
-  const { projectID, projectName, startDate, teamMembers } = req.body;
-  const query = 'INSERT INTO projects (projectID, projectName, startDate, teamMembers) VALUES (?, ?, ?, ?)';
-  db.query(query, [projectID, projectName, startDate, teamMembers], (err, result) => {
+  const { projectID, projectName, startDate } = req.body;
+  const query = 'INSERT INTO projects (projectID, projectName, startDate) VALUES (?, ?, ?)';
+  db.query(query, [projectID, projectName, startDate], (err, result) => {
     if (err) {
       return res.status(500).json({ error: err.message });
     }
@@ -204,7 +204,6 @@ app.post('/api/createProject', (req, res) => {
       projectID,
       projectName,
       startDate,
-      teamMembers,
       budget: 0
     };
     res.status(200).json(insertedData);
@@ -445,19 +444,6 @@ function isValidTableId(tableId) {
 }
 // Read
 
-app.get('/api/team', (req, res) => {
-  const sqlSelect = "SELECT firstname, middlename, lastname, role, email FROM users order by id asc";
-  db.query(sqlSelect, (err, result) => {
-    if (err) {
-      // console.log('Error fetching members:', err);
-      res.status(500).send('Error fetching members');
-      console.log(result);
-    } else {
-      res.status(200).json(result);
-    }
-  });
-});
-
 app.get('/api/partners/:id', (req, res) => {
   const projectId = req.params.id;
   const sqlSelect = "SELECT amount, source, date FROM budgetlog WHERE projectId = ?";
@@ -487,7 +473,7 @@ app.get('/api/projects', (req, res) => {
 
 app.get('/api/activities/:projectID', (req, res) => {
   const projectID = req.params.projectID;
-  const sqlSelect = "SELECT * FROM activity WHERE activityID LIKE CONCAT(?, '-%')";
+  const sqlSelect = "SELECT * FROM activity WHERE activityID LIKE CONCAT(?, '-%') AND isDeleted = 0";
   db.query(sqlSelect, [projectID], (err, result) => {
     if (err) {
       res.status(500).send('Error fetching activities');
@@ -644,7 +630,7 @@ app.get('/api/getExpenses/:projectID', (req, res) => {
   const projectID = req.params.projectID;
   
   // SQL query to sum up actuals for activityIDs that match the pattern
-  const sqlSelect = "SELECT SUM(actual) AS totalActuals FROM activity WHERE activityID LIKE CONCAT(?, '-%')";
+  const sqlSelect = "SELECT SUM(actual) AS totalActuals FROM activity WHERE activityID LIKE CONCAT(?, '-%') AND isDeleted = 0";
   
   db.query(sqlSelect, [projectID], (err, result) => {
     if (err) {
@@ -1015,21 +1001,6 @@ app.get('/api/addProjMember', (req, res) => {
       res.status(500).send('Error fetching users');
     } else {
       res.json(result);
-    }
-  });
-});
-
-// Get all project members
-app.get('/api/projectMembers/:id', (req, res) => {
-  const projectId = req.params.id;
-  const sqlSelect = "SELECT teamMembers FROM projects WHERE projectID = ?";
-  
-  db.query(sqlSelect, [projectId], (err, result) => {
-    if (err) {
-      console.log('Error fetching project members:', err);
-      res.status(500).send('Error fetching project members');
-    } else {
-      res.status(200).json(result[0]); // Return the teamMembers of the project
     }
   });
 });
