@@ -1269,7 +1269,12 @@ app.put('/api/updateOutput/:id', (req, res) => {
 
 // Get all members
 app.get('/api/members', (req, res) => {
-  const query = 'SELECT * FROM users WHERE isDeleted = 0';
+  const query = `
+    SELECT * 
+    FROM users 
+    WHERE isDeleted = 0 
+      AND NOT (id = 1 OR email = 'Admin')
+  `;
 
   db.query(query, (err, results) => {
     if (err) {
@@ -1393,20 +1398,17 @@ function formatDate(date) {
 }
 
 
-const currentDate = new Date();
-const formattedDate = formatDate(currentDate);
-
 const insertActivityReportQuery = `
     INSERT INTO activityreport
-    (activityReportID, selectedProject, selectedActivity, selectedObjective, selectedOutcome, 
+    (activityReportID, selectedProject, selectedActivity, activityDate, reportDate, location, selectedObjective, selectedOutcome, 
      selectedOutput, selectedIndicator, selectedInstitutions, detailedDescription, keyOutputs, 
-     challenges, successStories, conclusions, date)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+     challenges, successStories, conclusions)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 `;
 
 const insertGADDataQuery = `
     INSERT INTO argaddata
-    (activityReportID, category, male, female, lgbtqia, date)
+    (activityReportID, category, male, female, lgbtqia, reportDate)
     VALUES (?, ?, ?, ?, ?, ?)
 `;
 
@@ -1424,17 +1426,19 @@ app.post('/api/addActivityReport', (req, res) => {
       }
 
       const { 
-        selectedProject, selectedActivity, selectedObjective, selectedOutcome, 
+        selectedProject, selectedActivity, activityDate, location, selectedObjective, selectedOutcome, 
         selectedOutput, selectedIndicator, selectedInstitutions, detailedDescription, keyOutputs, 
         challenges, successStories, conclusions, genderAgeDisabilityData 
       } = req.body;
 
       const formattedActivityReportID = "AR" + activityReportID.toString().padStart(4, "0");
+      const currentDate = new Date();
+      const actDate = new Date(activityDate);
 
       // Insert the activity report data
-      db.query(insertActivityReportQuery, [formattedActivityReportID, selectedProject, selectedActivity, selectedObjective, 
+      db.query(insertActivityReportQuery, [formattedActivityReportID, selectedProject, selectedActivity, formatDate(actDate), formatDate(currentDate), location, selectedObjective, 
         selectedOutcome, selectedOutput, selectedIndicator, selectedInstitutions.join(', '), detailedDescription, keyOutputs, 
-        challenges, successStories, conclusions, formattedDate], (error, results) => {
+        challenges, successStories, conclusions], (error, results) => {
         
         if (error) {
           console.error('Error inserting activity report:', error);
@@ -1450,7 +1454,7 @@ app.post('/api/addActivityReport', (req, res) => {
               data.male,
               data.female,
               data.lgbtqia,
-              formattedDate,
+              formatDate(currentDate),
             ], (error) => {
               if (error) {
                 reject(error);
