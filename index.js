@@ -916,14 +916,19 @@ app.get('/api/vouchernumber', (req, res) => {
 });
 
 
-app.get('/api/getExpenses/:id', (req, res) => {
-  const id = req.params.id;
-  const sqlSelect = "SELECT * FROM vouchercredit where accountcode like CONCAT(?, '%') order by id asc";
-  db.query(sqlSelect, [id], (err, result) => {
+app.get('/api/getExpenses/:projectID', (req, res) => {
+  const projectID = req.params.projectID;
+  
+  // SQL query to sum up actuals for activityIDs that match the pattern
+  const sqlSelect = "SELECT SUM(actual) AS totalActuals FROM activity WHERE activityID LIKE CONCAT(?, '-%')";
+  
+  db.query(sqlSelect, [projectID], (err, result) => {
     if (err) {
       res.status(500).send('Error fetching data');
     } else {
-      res.json(result);
+      // Handle case where no matching records are found (result is null)
+      const totalActuals = result[0]?.totalActuals || 0; // Default to 0 if null
+      res.json({ totalActuals });
     }
   });
 });
