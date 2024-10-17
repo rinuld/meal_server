@@ -152,56 +152,6 @@ app.get('/api/session', (req, res) => {
   }
 })
 
-// Create
-
-// Set up multer storage for image upload
-const storeToUpload = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, 'uploads/'); // Specify the destination folder for image uploads
-  },
-  filename: (req, file, cb) => {
-    console.log(file);
-    const fileName = `${Date.now()}-${file.originalname}`;
-    cb(null, fileName); // Generate a unique filename for the uploaded image
-  },
-});
-
-// Configure multer to only accept image files
-const fileFilter = (req, file, cb) => {
-  const fileTypes = /jpeg|jpg|png|gif/; // Regular expression for allowed image file formats
-  const extName = fileTypes.test(path.extname(file.originalname).toLowerCase());
-  const mimeType = fileTypes.test(file.mimetype);
-  if (extName && mimeType) {
-    cb(null, true);
-  } else {
-    cb('Error: Only image files are allowed!');
-  }
-};
-
-// Initialize multer with the configured storage and file filter
-const updateImage = multer({ storage: storeToUpload });
-
-// Route to handle image upload and table update
-app.put('/api/updateImage/:id', updateImage.single('image'), (req, res) => {
-  const { id } = req.params;
-
-  const imagePath = req.file.path;
-
-  // Execute an SQL query to update the table and store the image path in the database
-  const query = 'UPDATE users SET image_url = ? WHERE id = ?';
-
-  db.query(query, [imagePath, id], (error, result) => {
-    if (error) {
-      console.error('Error updating table:', error);
-      res.status(500).json({ error: 'Failed to update the table.' });
-    } else {
-      res.status(200).json({ message: 'Table updated successfully.' });
-    }
-  });
-});
-
-app.use('/api/userImage', express.static(path.join(__dirname, 'uploads')));
-
 app.post('/api/insertUser', (req, res) => {
   // const { username, password } = req.body;
   const { firstname, lastname, middlename, address, sex, birthdate, email, role, password } = req.body;
@@ -279,8 +229,8 @@ app.post('/api/createObjectives', (req, res) => {
 
   db.query("SELECT id FROM goal ORDER BY id DESC LIMIT 1", (err, result) => {
     if (err) {
-      console.log('Error retrieving last voucher number:', err);
-      res.status(500).send('Error retrieving last voucher number');
+      console.log('Error retrieving last objective number:', err);
+      res.status(500).send('Error retrieving last objective number');
     } else {
       let objectiveID = 1;
       if (result.length > 0) {
@@ -308,8 +258,8 @@ app.post('/api/createOutcome', (req, res) => {
   const query = 'INSERT INTO outcome (outcomeID, title, goalID) VALUES (?, ?, ?)';
   db.query("SELECT id FROM outcome ORDER BY id DESC LIMIT 1", (err, result) => {
     if (err) {
-      console.log('Error retrieving last voucher number:', err);
-      res.status(500).send('Error retrieving last voucher number');
+      console.log('Error retrieving last outcome number:', err);
+      res.status(500).send('Error retrieving last outcome number');
     } else {
       let outcomeID = 1;
       if (result.length > 0) {
@@ -338,8 +288,8 @@ app.post('/api/createOutput', (req, res) => {
   const query = 'INSERT INTO output (outputID, title, objOutID) VALUES (?, ?, ?)';
   db.query("SELECT id FROM output ORDER BY id DESC LIMIT 1", (err, result) => {
     if (err) {
-      console.log('Error retrieving last voucher number:', err);
-      res.status(500).send('Error retrieving last voucher number');
+      console.log('Error retrieving last output number:', err);
+      res.status(500).send('Error retrieving last output number');
     } else {
       let outputID = 1;
       if (result.length > 0) {
@@ -405,124 +355,6 @@ app.post('/api/createlogs', (req, res) => {
     } else {
       // console.log('Data inserted successfully');
       res.status(200).send('Data inserted successfully');
-    }
-  });
-});
-
-app.post('/api/createvoucher', (req, res) => {
-  const {
-    selectedDate, 
-    payee, 
-    details, 
-    voucherNumber,
-    entryTable,
-    preparedby, 
-    checkedby, 
-    approvedby,
-    status
-  } = req.body;
-
-  const insertVoucherDetails = "INSERT INTO vouchers (voucherNumber, date, payee, details, preparedby, checkedby, approvedby, ispreparedbysigned, ischeckedbysigned, isapprovedbysigned, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-  const insertJournalEntry = "INSERT INTO voucherjournalentry (voucherNumber, totalamount) VALUES (?, ?)";
-  const insertDebit = "INSERT INTO voucherdebit (entryID, accountcode, accounttitle, amount) VALUES (?, ?, ?, ?)";
-  const insertCredit = "INSERT INTO vouchercredit (entryID, accountcode, accounttitle, amount) VALUES (?, ?, ?, ?)";
-  const isSuccess = false;
-  // Retrieve the last voucherNumber from the vouchers table
-  db.query("SELECT id FROM vouchers ORDER BY id DESC LIMIT 1", (err, result) => {
-    if (err) {
-      console.log('Error retrieving last voucher number:', err);
-    } else {
-      let lastVoucherNumber = 1;
-      if (result.length > 0) {
-        lastVoucherNumber = parseInt(result[0].id) + 1;
-      }
-
-      // Insert voucher details with the retrieved voucherNumber
-      db.query(insertVoucherDetails, [lastVoucherNumber, selectedDate, payee, details, preparedby, checkedby, approvedby, 1, 0, 0, status], (err, result) => {
-        if (err) {
-          console.log('Error inserting voucher data:', err);
-          isSuccess = false;
-        } else {
-          console.log('Voucher data inserted successfully');
-          // Perform the next query after voucher data insertion
-          db.query(insertJournalEntry, [lastVoucherNumber, 0], (err, result) => {
-            if (err) {
-              console.log('Error inserting journalentry data:', err);
-              isSuccess = false;
-            } else {
-              console.log('Journal entry data inserted successfully');
-              // Perform the next queries after journal entry data insertion
-              entryTable.forEach((entry, index) => {
-                if (entry.debit !== "") {
-                  db.query(insertDebit, [lastVoucherNumber, entry.accountCode, entry.accountTitle, entry.debit], (err, result) => {
-                    if (err) {
-                      console.log('Error inserting debit data:', err);
-                      isSuccess = false;
-                    } else {
-                      console.log('Debit data inserted successfully');
-                    }
-                  });
-                } else {
-                  db.query(insertCredit, [lastVoucherNumber, entry.accountCode, entry.accountTitle, entry.credit], (err, result) => {
-                    if (err) {
-                      console.log('Error inserting credit data:', err);
-                      isSuccess = false;
-                    } else {
-                      console.log('Credit data inserted successfully');
-                    }
-                  });
-                }
-              });
-            }
-          });
-        }
-      });
-    }
-  });
-
-  if (!isSuccess) {
-    res.status(500).send('Error inserting voucher data');
-  } else {
-    res.status(200).send('Data inserted successfully');
-  }
-});
-
-app.post('/api/createparticipants', (req, res) => {
-  const currentDate = new Date();
-  const { firstname, lastname, middlename, age, sex, cityMun, org, indicatorID } = req.body;
-  const query = 'INSERT INTO partyindivdual (firstname, lastname, middlename, age, sex, cityMun, organization, indicatorID, participantsID, dateadded) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
-
-  db.query("SHOW TABLE STATUS LIKE 'partyindivdual'", (err, result) => {
-    if (err) {
-      // console.log("err");
-      return res.status(500).json({ error: err.message });
-    } else {
-      if (result && result.length > 0) {
-        const partyID = result[0].Rows + 1;
-        const formattedPartyID = "PART" + partyID.toString().padStart(4, "0");
-
-        db.query(query, [firstname, lastname, middlename, age, sex, cityMun, org, indicatorID, formattedPartyID, currentDate], (err, result) => {
-          if (err) {
-            return res.status(500).json({ error: err.message });
-          } else {
-            const insertedData = {
-              id: partyID,
-              firstname: firstname, 
-              lastname: lastname,
-              middlename: middlename,
-              age: age,
-              sex: sex,
-              organization: org,
-              indicatorID: indicatorID,
-              cityMun: cityMun
-            };
-            // console.log("success");
-            res.status(200).json(insertedData);
-          }
-        });
-      } else {
-        res.status(500).json({ error: 'Failed to get table status' });
-      }
     }
   });
 });
@@ -653,77 +485,13 @@ app.get('/api/projects', (req, res) => {
   });
 });
 
-app.get('/api/activities', (req, res) => {
-  const sqlSelect = "SELECT * FROM activity order by id asc";
-  db.query(sqlSelect, (err, result) => {
+app.get('/api/activities/:projectID', (req, res) => {
+  const projectID = req.params.projectID;
+  const sqlSelect = "SELECT * FROM activity WHERE activityID LIKE CONCAT(?, '-%')";
+  db.query(sqlSelect, [projectID], (err, result) => {
     if (err) {
       res.status(500).send('Error fetching activities');
       console.log(result);
-    } else {
-      res.json(result);
-    }
-  });
-});
-
-app.get('/api/activities/:id', (req, res) => {
-  const id = req.params.id;
-  const sqlSelect = "SELECT act.*, act.budget - COALESCE(credit.totalAmount, 0) AS balance, COALESCE(credit.totalAmount, 0) AS totalCreditAmount FROM activity AS act LEFT JOIN (SELECT accountcode, SUM(amount) AS totalAmount FROM vouchercredit GROUP BY accountcode) AS credit ON act.activityID = credit.accountcode WHERE act.activityID LIKE ? and act.isDeleted = 0 ORDER BY act.id ASC";
-  db.query(sqlSelect, [`${id}-%`], (err, result) => {
-    if (err) {
-      res.status(500).send('Error fetching data');
-    } else {
-      res.json(result);
-    }
-  });
-});
-
-app.get('/api/activityRecords/:id', (req, res) => {
-  const id = req.params.id;
-  const voucherCreditQuery = "SELECT * FROM vouchercredit where accountcode like ? order by id asc";
-  const voucherDebitQuery = "SELECT * FROM voucherdebit where accountcode like ? order by id asc";
-  let data = [];
-  db.query(voucherCreditQuery, [id], (err, creditResult) => {
-    if (err) {
-      console.error('Error fetching credit data:', err);
-      res.status(500).send('Error fetching data');
-    } else {
-      data = data.concat(creditResult.map(row => ({ ...row, type: "Credit" })));
-
-      db.query(voucherDebitQuery, [id], (err, debitResult) => {
-        if (err) {
-          console.error('Error fetching debit data:', err);
-          res.status(500).send('Error fetching data');
-        } else {
-          data = data.concat(debitResult.map(row => ({ ...row, type: "Debit" })));
-          res.status(200).send(data);
-        }
-      });
-    }
-  });
-});
-
-app.get('/api/totalExpenses/:id', (req, res) => {
-  const id = req.params.id;
-  // const voucherCreditQuery = "SELECT * FROM vouchercredit where accountcode like ? order by id asc";
-  const voucherCreditQuery = "SELECT activityID, activityName, budget, SUM(amount) FROM activity AS act JOIN vouchercredit AS vc ON act.activityID = vc.accountcode WHERE act.activityID = ?";
-  // let data = 0;
-  db.query(voucherCreditQuery, [id], (err, result) => {
-    if (err) {
-      console.error('Error fetching credit data:', err);
-      res.status(500).send('Error fetching data');
-    } else {
-      // data = creditResult.map(row => row.amount).reduce((accumulator, currentValue) => accumulator + currentValue, 0);
-      res.status(200).send(result);
-    }
-  });
-});
-
-app.get('/api/participants/:id', (req, res) => {
-  const id = req.params.id;
-  const sqlSelect = "SELECT * FROM partyindivdual where indicatorID like ? order by id asc";
-  db.query(sqlSelect, [id], (err, result) => {
-    if (err) {
-      res.status(500).send('Error fetching data');
     } else {
       res.json(result);
     }
@@ -872,50 +640,6 @@ app.get('/api/projectDetails/:id', (req, res) => {
   });
 });
 
-app.get('/api/voucherapprovals', (req, res) => {
-  const sqlSelect = "SELECT * FROM vouchers order by id desc";
-  db.query(sqlSelect, (err, result) => {
-    if (err) {
-      // console.log('Error fetching data logs:', err);
-      res.status(500).send('Error fetching data logs');
-      console.log(result);
-    } else {
-      res.json(result);
-      // console.log(result.data);
-    }
-  });
-});
-
-app.get('/api/voucherrecord', (req, res) => {
-  const sqlSelect = "SELECT * FROM vouchers order by id desc";
-  db.query(sqlSelect, (err, result) => {
-    if (err) {
-      // console.log('Error fetching data logs:', err);
-      res.status(500).send('Error fetching data logs');
-      console.log(result);
-    } else {
-      res.json(result);
-      // console.log(result.data);
-    }
-  });
-});
-
-app.get('/api/vouchernumber', (req, res) => {
-  const sqlSelect = "SELECT * FROM vouchers order by id desc limit 1";
-  db.query(sqlSelect, (err, result) => {
-    if (err) {
-      res.status(500).send('Error fetching data logs');
-    } else {
-      if(result.length>0){
-        res.json({ row: result[0].id + 1 });
-      }else{
-        res.json({ row: 1 });
-      }
-    }
-  });
-});
-
-
 app.get('/api/getExpenses/:projectID', (req, res) => {
   const projectID = req.params.projectID;
   
@@ -929,31 +653,6 @@ app.get('/api/getExpenses/:projectID', (req, res) => {
       // Handle case where no matching records are found (result is null)
       const totalActuals = result[0]?.totalActuals || 0; // Default to 0 if null
       res.json({ totalActuals });
-    }
-  });
-});
-
-app.get('/api/debitCredit/:id', (req, res) => {
-  const id = req.params.id;
-  const creditdata = "SELECT * FROM vouchercredit where entryID = ? order by id asc";
-  const debitdata = "SELECT * FROM voucherdebit where entryID = ? order by id asc";
-  let data = [];
-  db.query(debitdata, [id], (err, creditResult) => {
-    if (err) {
-      console.error('Error fetching credit data:', err);
-      res.status(500).send('Error fetching data');
-    } else {
-      data = data.concat(creditResult.map(row => ({ ...row, type: "Debit" })));
-
-      db.query(creditdata, [id], (err, debitResult) => {
-        if (err) {
-          console.error('Error fetching debit data:', err);
-          res.status(500).send('Error fetching data');
-        } else {
-          data = data.concat(debitResult.map(row => ({ ...row, type: "Credit" })));
-          res.status(200).send(data);
-        }
-      });
     }
   });
 });
