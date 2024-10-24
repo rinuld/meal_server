@@ -1077,8 +1077,8 @@ const insertActivityReportQuery = `
     INSERT INTO activityreport
     (activityReportID, selectedProject, selectedActivity, activityDate, reportDate, location, selectedObjective, selectedOutcome, 
      selectedOutput, selectedIndicator, selectedInstitutions, detailedDescription, keyOutputs, 
-     challenges, successStories, conclusions)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+     challenges, lessons, successStories, conclusions)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 `;
 
 const insertGADDataQuery = `
@@ -1103,7 +1103,7 @@ app.post('/api/addActivityReport', (req, res) => {
       const { 
         selectedProject, selectedActivity, activityDate, location, selectedObjective, selectedOutcome, 
         selectedOutput, selectedIndicator, selectedInstitutions, detailedDescription, keyOutputs, 
-        challenges, successStories, conclusions, genderAgeDisabilityData 
+        challenges, lessons, successStories, conclusions, genderAgeDisabilityData 
       } = req.body;
 
       const formattedActivityReportID = "AR" + activityReportID.toString().padStart(4, "0");
@@ -1113,7 +1113,7 @@ app.post('/api/addActivityReport', (req, res) => {
       // Insert the activity report data
       db.query(insertActivityReportQuery, [formattedActivityReportID, selectedProject, selectedActivity, formatDate(actDate), formatDate(currentDate), location, selectedObjective, 
         selectedOutcome, selectedOutput, selectedIndicator, selectedInstitutions.join(', '), detailedDescription, keyOutputs, 
-        challenges, successStories, conclusions], (error, results) => {
+        challenges, lessons, successStories, conclusions], (error, results) => {
         
         if (error) {
           console.error('Error inserting activity report:', error);
