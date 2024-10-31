@@ -73,7 +73,7 @@ app.post(
 
     try {
       const verificationURL = "https://www.google.com/recaptcha/api/siteverify";
-      const secretKey = "6LcrxOImAAAAAI0tc4q09dOQQMYsx0pwny3pPbrY";
+      const secretKey = "6LdBamQqAAAAAPvYrPNyixxCsCvRpThzGO4BGDld";
 
       const response = await axios.post(verificationURL, null, {
         params: {
