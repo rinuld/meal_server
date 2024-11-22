@@ -458,7 +458,7 @@ app.get('/api/partners/:id', (req, res) => {
 });
 
 app.get('/api/projects', (req, res) => {
-  const sqlSelect = "SELECT * FROM projects order by id asc";
+  const sqlSelect = "SELECT * FROM projects WHERE isDeleted = 0 ORDER BY id ASC";
   db.query(sqlSelect, (err, result) => {
     if (err) {
       // console.log('Error fetching members:', err);
@@ -468,6 +468,44 @@ app.get('/api/projects', (req, res) => {
       res.json(result);
       // console.log(result.data);
     }
+  });
+});
+
+app.put('/api/updateDeleteProject/:id', (req, res) => {
+  const id = req.params.id;
+
+  const query = 'UPDATE projects SET isDeleted = ? WHERE id = ?';
+
+  // Execute the update query
+  db.query(query, [true, id], (err, result) => {
+    if (err) {
+      console.error('Error updating project:', err);
+      res.status(500).json({ message: 'Internal server error' });
+      return;
+    }
+
+    if (result.affectedRows === 0) {
+      res.status(404).json({ message: 'project not found' });
+      return;
+    }
+
+    // Get the title from the updated objective
+    const getTitleQuery = 'SELECT projectName FROM projects WHERE id = ?';
+    db.query(getTitleQuery, [id], (err, result) => {
+      if (err) {
+        console.error('Error fetching title:', err);
+        res.status(500).json({ message: 'Internal server error' });
+        return;
+      }
+
+      if (result.length === 0) {
+        res.status(404).json({ message: 'project not found' });
+        return;
+      }
+
+      const title = result[0].projectName;
+      res.json({ message: 'project deleted successfully', title });
+    });
   });
 });
 
