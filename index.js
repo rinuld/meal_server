@@ -57,11 +57,6 @@ const upload = multer({ storage: storage });
 // login
 app.post(
   '/api/login',
-  [
-    // Validate input fields
-    body('username').notEmpty().withMessage('Username is required'),
-    body('password').notEmpty().withMessage('Password is required'),
-  ],
   async (req, res) => {
     const errors = validationResult(req);
 
@@ -90,7 +85,7 @@ app.post(
         db.query(query, [username], async (error, results) => {
           if (error) {
             console.error('Error executing SQL query', error);
-            return res.status(500).json({ error: 'Internal server error' });
+            return res.status(500).json({ error: 'Communication error with server' });
           }
 
           if (results.length > 0) {
@@ -105,11 +100,11 @@ app.post(
             } else {
               // Invalid password
               console.log("not logged in");
-              return res.status(401).json({ error: 'Invalid credentials' });
+              return res.status(401).json({ error: 'Incorrect password' });
             }
           } else {
             // Invalid username
-            return res.status(401).json({ error: 'Invalid credentials' });
+            return res.status(401).json({ error: 'Incorrect username' });
           }
         });
       } else {
